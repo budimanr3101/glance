@@ -16,6 +16,8 @@ final class AppEnvironment {
     let faceUnlockCoordinator: FaceUnlockCoordinator
     /// Held, not just constructed — owns a repeating timer that would silently stop enforcing auto-lock if deallocated.
     let sessionAutoLocker: SessionAutoLocker
+    /// Experimental Finder -> notch file shelf monitor.
+    let fileShelfController = FileShelfController()
     /// Constructed here (not started) so the About page and `AppDelegate` share one instance; `AppDelegate` calls `updater.start()`.
     let updater = UpdaterController()
 
@@ -25,5 +27,6 @@ final class AppEnvironment {
     init() {
         faceUnlockCoordinator = FaceUnlockCoordinator(pocController: pocController)
         sessionAutoLocker = SessionAutoLocker(pocController: pocController)
+        fileShelfController.start()
     }
 }
