@@ -4,10 +4,11 @@
 //
 //  Experimental Finder -> notch file shelf.
 //  V0 is intentionally non-destructive: Cmd+X stages Finder selection in memory,
-//  Cmd+V previews the Finder destination, but no file is moved yet.
+//  Cmd+Shift+V previews the Finder destination, but no file is moved yet.
 //
 
 import AppKit
+import ApplicationServices
 import Foundation
 
 struct FileShelfPresentation: Equatable {
@@ -29,6 +30,10 @@ final class FileShelfController {
 
     func start() {
         guard globalKeyMonitor == nil else { return }
+
+        if !AXIsProcessTrusted() {
+            print("[FileShelf] Accessibility is not granted yet; Finder shortcuts will start working after Glance is trusted.")
+        }
 
         globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let characters = event.charactersIgnoringModifiers?.lowercased()
@@ -64,9 +69,9 @@ final class FileShelfController {
         guard !modifiers.contains(.option), !modifiers.contains(.control) else { return }
 
         switch characters {
-        case "x":
+        case "x" where !modifiers.contains(.shift):
             stageFinderSelection()
-        case "v":
+        case "v" where modifiers.contains(.shift):
             previewPasteDestination()
         default:
             break
@@ -91,11 +96,12 @@ final class FileShelfController {
         guard !urls.isEmpty else { return }
         stagedFiles = urls
 
-        let presentation = FileShelfPresentation(
-            fileNames: urls.map(\.lastPathComponent),
-            state: .staged
+        FileShelfOverlayController.shared.present(
+            FileShelfPresentation(
+                fileNames: urls.map(\.lastPathComponent),
+                state: .staged
+            )
         )
-        NotchOverlayController.shared.presentFileShelf(presentation)
 
         print("[FileShelf] Staged \(urls.count) item(s): \(urls.map(\.path))")
     }
@@ -108,7 +114,7 @@ final class FileShelfController {
         }
 
         guard let destinationPath = finderDestinationPath() else {
-            print("[FileShelf] Cmd+V detected, but Finder destination was unavailable")
+            print("[FileShelf] Cmd+Shift+V detected, but Finder destination was unavailable")
             return
         }
 
@@ -117,14 +123,15 @@ final class FileShelfController {
             ? destinationURL.path
             : destinationURL.lastPathComponent
 
-        let presentation = FileShelfPresentation(
-            fileNames: stagedFiles.map(\.lastPathComponent),
-            state: .pasteTarget(destinationName)
+        FileShelfOverlayController.shared.present(
+            FileShelfPresentation(
+                fileNames: stagedFiles.map(\.lastPathComponent),
+                state: .pasteTarget(destinationName)
+            )
         )
-        NotchOverlayController.shared.presentFileShelf(presentation)
 
         // EXPERIMENT SAFETY: do not move/copy/delete anything yet.
-        print("[FileShelf] EXPERIMENT ONLY — would move \(stagedFiles.count) item(s) to \(destinationURL.path)")
+        print("[FileShelf] EXPERIMENT ONLY: would move \(stagedFiles.count) item(s) to \(destinationURL.path)")
     }
 
     private func finderSelectionPaths() -> [String]? {
