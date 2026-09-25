@@ -10,5 +10,7 @@
 	<false/>
 	<key>SUEnableInstallerLauncherService</key>
 	<false/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Glance uses Finder automation to read your selected files and current destination for the experimental Notch File Shelf.</string>
 </dict>
 </plist>
